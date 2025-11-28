@@ -7,7 +7,7 @@ local returnPosition = nil
 local returnAfterPickup = false
 local previousBackpackCount = 0
 
-local myGui = UILib.new('Weapon Mods', Vector2.new(350, 450), {})
+local myGui = UILib.new('prison life', Vector2.new(350, 450), {})
 
 local mainTab = myGui:Tab('Main')
 

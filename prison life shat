@@ -1,0 +1,156 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/xyamnnn/uithingy/main/ui.lua"))() repeat wait() until UILib
+
+local lp = game.Players.LocalPlayer
+local fasterFireRate = false
+local original = {}
+local returnPosition = nil
+local returnAfterPickup = false
+local previousBackpackCount = 0
+
+local myGui = UILib.new('Weapon Mods', Vector2.new(350, 450), {})
+
+local mainTab = myGui:Tab('Main')
+
+local weaponSection = myGui:Section(mainTab, 'Weapon Modifications')
+local teleportSection = myGui:Section(mainTab, 'Teleport')
+
+local locations = {
+    ["Yard"] = Vector3.new(805.51, 98, 2458.41),
+    ["Police Base"] = Vector3.new(829.04, 99.98, 2245.12),
+    ["Crim Base"] = Vector3.new(-974.95, 108.32, 2057.60)
+}
+
+local gunLocations = {
+    ["Fal"] = Vector3.new(-916, 94.35, 2047.54),
+    ["AK47"] = Vector3.new(-932.03, 94.31, 2039.32),
+    ["M4A1"] = Vector3.new(846.87, 100.80, 2217.51),
+    ["Rem 870"] = Vector3.new(820.31, 100.88, 2217.09)
+}
+
+local function tp(locationName)
+    local char = lp.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Position = locations[locationName]
+        end
+    end
+end
+
+local function tpToGun(gunName)
+    local char = lp.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            returnPosition = hrp.Position
+            returnAfterPickup = true
+            previousBackpackCount = #lp.Backpack:GetChildren()
+            hrp.Position = gunLocations[gunName] + Vector3.new(0, 1, 0)
+        end
+    end
+end
+
+myGui:Choice(mainTab, teleportSection, 'Locations', {}, function(selected)
+    if #selected > 0 then
+        tp(selected[1])
+    end
+end, {"Yard", "Police Base", "Crim Base"}, false)
+
+myGui:Choice(mainTab, teleportSection, 'Weapons', {}, function(selected)
+    if #selected > 0 then
+        tpToGun(selected[1])
+    end
+end, {"Fal", "AK47", "M4A1", "Rem 870"}, false)
+
+local function modGun(gun)
+    if gun:IsA("Tool") and not original[gun] then
+        original[gun] = {
+            FireRate = gun:GetAttribute("FireRate"),
+            AutoFire = gun:GetAttribute("AutoFire"),
+            Projectile = gun:GetAttribute("Projectile")
+        }
+        
+        gun:SetAttribute("FireRate", 0.01)
+        gun:SetAttribute("AutoFire", true)
+        gun:SetAttribute("Projectile", "Taser")
+    end
+end
+
+local function modAllGuns()
+    local backpack = lp:FindFirstChild("Backpack")
+    if backpack then
+        for _, gun in pairs(backpack:GetChildren()) do
+            modGun(gun)
+        end
+    end
+end
+
+local function restoreGun(gun)
+    if gun and original[gun] then
+        for attr, val in pairs(original[gun]) do
+            gun:SetAttribute(attr, val)
+        end
+        original[gun] = nil
+    end
+end
+
+local function restoreAllGuns()
+    for gun, _ in pairs(original) do
+        restoreGun(gun)
+    end
+end
+
+myGui:Checkbox(mainTab, weaponSection, 'Faster FireRate', false, function(state)
+    if state then
+        modAllGuns()
+        fasterFireRate = true
+    else
+        restoreAllGuns()
+        fasterFireRate = false
+    end
+end)
+
+spawn(function()
+    while true do
+        if fasterFireRate then
+            local backpack = lp:FindFirstChild("Backpack")
+            if backpack then
+                for _, gun in pairs(backpack:GetChildren()) do
+                    modGun(gun)
+                end
+            end
+        end
+        wait(0.5)
+    end
+end)
+
+spawn(function()
+    while true do
+        if returnAfterPickup then
+            local backpack = lp:FindFirstChild("Backpack")
+            if backpack then
+                local currentBackpackCount = #backpack:GetChildren()
+                if currentBackpackCount > previousBackpackCount then
+                    local char = lp.Character
+                    if char and returnPosition then
+                        local hrp = char:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            hrp.Position = returnPosition + Vector3.new(0, 1, 0)
+                            returnAfterPickup = false
+                            returnPosition = nil
+                        end
+                    end
+                end
+                previousBackpackCount = currentBackpackCount
+            end
+        end
+        wait(0.1)
+    end
+end)
+
+myGui:CreateSettingsTab()
+
+while true do
+    myGui:Step()
+    wait(0.0015)
+end
